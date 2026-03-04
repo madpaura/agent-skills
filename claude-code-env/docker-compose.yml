@@ -1,0 +1,102 @@
+version: "3.9"
+
+# ============================================================================
+# Claude Code Development Environment - Docker Compose
+# ============================================================================
+# Usage:
+#   1. Copy .env.example to .env and fill in your values
+#   2. Run: docker compose up -d
+#   3. Open: http://localhost:8080
+# ============================================================================
+
+services:
+  claude-code:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CODE_SERVER_VERSION: "4.109.2"
+        NODE_MAJOR: "22"
+        USERNAME: developer
+        USER_UID: 1000
+        USER_GID: 1000
+    image: claude-code-env:latest
+    container_name: claude-code-env
+    hostname: claude-dev
+
+    # ---- Full Network Access ----
+    network_mode: host    # Full host network access (ports directly exposed)
+    # If you prefer isolated networking, comment out network_mode and use:
+    # ports:
+    #   - "8080:8080"     # code-server (VS Code)
+    #   - "3000:3000"     # Dev server
+    #   - "3001:3001"     # Dev server alt
+    #   - "5173:5173"     # Vite
+    #   - "8000:8000"     # Python/FastAPI
+    #   - "8443:8443"     # HTTPS dev
+
+    # ---- Environment Variables ----
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-Asia/Kolkata}
+
+    # ---- Volume Mounts ----
+    volumes:
+      # Workspace - mount your project directory here
+      - ${WORKSPACE_PATH:-./workspace}:/home/developer/workspace
+
+      # Persist VS Code extensions and settings across restarts
+      - code-server-extensions:/home/developer/.local/share/code-server
+
+      # Persist Claude Code configuration
+      - claude-config:/home/developer/.claude
+
+      # Git configuration (optional - mount host git config)
+      - ${HOME}/.gitconfig:/home/developer/.gitconfig:ro
+
+      # SSH keys (optional - mount for git SSH access)
+      # - ${HOME}/.ssh:/home/developer/.ssh:ro
+
+      # Docker socket (optional - for Docker-in-Docker workflows)
+      # - /var/run/docker.sock:/var/run/docker.sock
+
+      # NPM cache (optional - speeds up npm installs)
+      - npm-cache:/home/developer/.npm
+
+      # Bash history persistence
+      - bash-history:/home/developer/.bash_history_dir
+
+    # ---- Resource Limits ----
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: "4.0"
+        reservations:
+          memory: 2G
+          cpus: "1.0"
+
+    # ---- Restart Policy ----
+    restart: unless-stopped
+
+    # ---- Security ----
+    security_opt:
+      - seccomp:unconfined    # Required for some debugging tools
+    cap_add:
+      - SYS_PTRACE            # Required for debugging
+
+    # ---- Stdin/tty for interactive use ----
+    stdin_open: true
+    tty: true
+
+# ---- Named Volumes ----
+volumes:
+  code-server-extensions:
+    name: claude-code-extensions
+  claude-config:
+    name: claude-code-config
+  npm-cache:
+    name: claude-code-npm-cache
+  bash-history:
+    name: claude-code-bash-history
