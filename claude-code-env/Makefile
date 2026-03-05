@@ -2,7 +2,7 @@
 # Claude Code Environment - Makefile
 # ============================================================================
 
-.PHONY: build run stop restart logs shell clean help setup
+.PHONY: build run stop restart logs shell clean help setup save load status claude
 
 IMAGE_NAME := claude-code-env
 CONTAINER_NAME := claude-code-env
@@ -26,36 +26,36 @@ setup: ## Initial setup: create .env and workspace directory
 	@echo "✓ Workspace directory ready"
 
 build: ## Build the Docker image
-	docker compose build
+	./run.sh build
 
 run: setup ## Start the environment (detached)
-	docker compose up -d
-	@echo ""
-	@echo "✓ Claude Code Environment is starting..."
-	@echo "  → VS Code:     http://localhost:8080"
-	@echo "  → Password:    Check your .env file"
-	@echo ""
+	./run.sh start
 
 stop: ## Stop the environment
-	docker compose down
+	./run.sh stop
 
 restart: ## Restart the environment
-	docker compose restart
+	./run.sh restart
 
 logs: ## View container logs
-	docker compose logs -f
+	./run.sh logs
 
 shell: ## Open a bash shell in the container
-	docker exec -it $(CONTAINER_NAME) bash
+	./run.sh shell
 
 claude: ## Open Claude Code CLI in the container
-	docker exec -it $(CONTAINER_NAME) claude
+	./run.sh claude
 
 status: ## Check container status
-	@docker ps --filter name=$(CONTAINER_NAME) --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+	./run.sh status
 
-clean: ## Remove container, image, and volumes
-	docker compose down -v --rmi local
-	@echo "✓ Cleaned up all resources"
+save: ## Save Docker image to file
+	./save-image.sh save
+
+load: ## Load Docker image from file (usage: make load FILE=image.tar.gz)
+	./save-image.sh load $(FILE)
+
+clean: ## Remove container, volumes, and data
+	./run.sh clean
 
 rebuild: clean build run ## Full rebuild from scratch
